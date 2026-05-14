@@ -231,7 +231,7 @@ export default function FormPage({ token, onLogout }) {
               </select>
             </div>
 
-            <div className="row-2">
+            {/* <div className="row-2">
               <div className="field">
                 <label>No. Telepon</label>
                 <input value={form.no_telepon} onChange={e => set('no_telepon', e.target.value)} placeholder="061-xxxxxx" />
@@ -245,7 +245,7 @@ export default function FormPage({ token, onLogout }) {
             <div className="field">
               <label>URL Foto (Cloudinary)</label>
               <input value={form.foto_url} onChange={e => set('foto_url', e.target.value)} placeholder="https://res.cloudinary.com/..." />
-            </div>
+            </div> */}
           </div>
 
           {/* ── Fasilitas ── */}
