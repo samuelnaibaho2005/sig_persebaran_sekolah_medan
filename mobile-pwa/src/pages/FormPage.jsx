@@ -240,12 +240,12 @@ export default function FormPage({ token, onLogout }) {
                 <label>Website</label>
                 <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="www.sman5medan.sch.id" />
               </div>
-            </div>
+            </div> */}
 
             <div className="field">
               <label>URL Foto (Cloudinary)</label>
               <input value={form.foto_url} onChange={e => set('foto_url', e.target.value)} placeholder="https://res.cloudinary.com/..." />
-            </div> */}
+            </div>
           </div>
 
           {/* ── Fasilitas ── */}
