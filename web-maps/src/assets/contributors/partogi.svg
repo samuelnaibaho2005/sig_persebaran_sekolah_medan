@@ -1,0 +1,14 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Samuel avatar</title>
+  <desc id="desc">Gradient avatar placeholder with initials S</desc>
+  <defs>
+    <linearGradient id="grad4" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#7c2d12" />
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="120" fill="url(#grad4)"/>
+  <circle cx="120" cy="92" r="38" fill="#f8fafc" opacity="0.9"/>
+  <path d="M70 204c8-32 24-46 50-46s42 14 50 46" fill="#f8fafc" opacity="0.9"/>
+  <text x="120" y="148" text-anchor="middle" font-size="64" font-family="Arial, sans-serif" font-weight="700" fill="#020617">S</text>
+</svg>

@@ -1,481 +1,56 @@
 import { useState, useEffect, useRef } from 'react'
-import {
-  MapContainer, TileLayer, Marker, Popup,
-  Polyline, useMap
-} from 'react-leaflet'
-import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import axios from 'axios'
+import bagasPhoto from './assets/contributors/bagas.jpeg'
+import fajarPhoto from './assets/contributors/fajar.jpeg'
+import riaPhoto from './assets/contributors/ria.svg'
+import samuelPhoto from './assets/contributors/samuel.jpg'
+import zakiyyaPhoto from './assets/contributors/zakiyya.svg'
+import partogiPhoto from './assets/contributors/partogi.svg'
 
-const API = 'http://localhost:3001/api'
 
-/* ─── Haversine ──────────────────────────────────────────────── */
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2
-  return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(3))
-}
+const contributors = [
+  { name: 'BAGAS INSYAFI WIRADINATA', nim: '2305181088', photo: bagasPhoto, role: 'Mobile Developer', accent: '#22c55e' },
+  { name: 'FAJAR SIDDIK YUDHISTIRA', nim: '2305181068', photo: fajarPhoto, role: 'Data Collection & Database Designer', accent: '#3b82f6' },
+  { name: 'RIA ADELINA', nim: '2305181072', photo: riaPhoto, role: 'Data Collection & Documentation', accent: '#ec4899' },
+  { name: 'SAMUEL NIKOLAS NAIBAHO', nim: '2305181036', photo: samuelPhoto, role: 'Project Lead & Web Developer', accent: '#f59e0b' },
+  { name: 'ZAKIYYA AIDILLA FITHRA', nim: '2305181028', photo: zakiyyaPhoto, role: 'System Analyst', accent: '#a78bfa' },
+  { name: 'PARTOGI IMMANUELA SIHOMBING', nim: '2305181028', photo: partogiPhoto, role: 'Database Designer', accent: '#294a87' },
+]
 
-/* ─── OSRM: jarak + geometry route ──────────────────────────── */
-async function fetchOSRM(lat1, lng1, lat2, lng2) {
-  try {
-    const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${lng1},${lat1};${lng2},${lat2}` +
-      `?overview=full&geometries=geojson`
-    const res = await fetch(url)
-    const data = await res.json()
-    if (data.code === 'Ok' && data.routes[0]) {
-      const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng])
-      return {
-        distanceKm: (data.routes[0].distance / 1000).toFixed(2),
-        durationMin: Math.ceil(data.routes[0].duration / 60),
-        coords,
-        source: 'osrm',
-      }
-    }
-  } catch (_) {}
-  return {
-    distanceKm: null,
-    durationMin: null,
-    coords: null,
-    source: 'fail',
-  }
-}
-
-/* ─── Icon marker ────────────────────────────────────────────── */
-function makePin(color, label) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      display:flex;align-items:center;justify-content:center;
-      width:32px;height:32px;border-radius:50% 50% 50% 0;
-      background:${color};border:2px solid #fff;
-      box-shadow:0 2px 10px rgba(0,0,0,0.35);
-      transform:rotate(-45deg);font-size:0">
-      <span style="transform:rotate(45deg);font-size:11px;
-        font-weight:700;color:#fff">${label}</span>
-    </div>`,
-    iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -34],
-  })
-}
-
-/* ─── FitBounds helper ───────────────────────────────────────── */
-function AutoFit({ positions }) {
-  const map = useMap()
-  useEffect(() => {
-    if (positions && positions.length >= 2) {
-      const bounds = L.latLngBounds(positions)
-      map.fitBounds(bounds, { padding: [48, 48], animate: true, duration: 0.8 })
-    }
-  }, [positions])
-  return null
-}
-
-/* ─── Mini Map ───────────────────────────────────────────────── */
-function MiniMap({ ptA, ptB, routeCoords, straight }) {
-  const center = [
-    (ptA.lat + ptB.lat) / 2,
-    (ptA.lng + ptB.lng) / 2,
-  ]
-  const allPositions = routeCoords
-    ? [[ptA.lat, ptA.lng], ...routeCoords, [ptB.lat, ptB.lng]]
-    : [[ptA.lat, ptA.lng], [ptB.lat, ptB.lng]]
-
-  return (
-    <div className="lp-minimap-wrap">
-      <div className="lp-minimap-label">
-        <span>🗺 Visualisasi Rute di Peta</span>
-        {routeCoords
-          ? <span className="lp-minimap-badge osrm">● Via Jalan (OSRM)</span>
-          : <span className="lp-minimap-badge straight">— Garis Lurus (Haversine)</span>}
-      </div>
-      <MapContainer
-        center={center}
-        zoom={13}
-        style={{ height: 340, width: '100%', borderRadius: '0 0 14px 14px' }}
-        zoomControl={true}
-        scrollWheelZoom={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://osm.org">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <AutoFit positions={allPositions} />
-
-        {/* Marker A */}
-        <Marker position={[ptA.lat, ptA.lng]} icon={makePin('#22c55e', 'A')}>
-          <Popup>
-            <strong>Titik A</strong><br />
-            {ptA.name || `${ptA.lat.toFixed(4)}, ${ptA.lng.toFixed(4)}`}
-          </Popup>
-        </Marker>
-
-        {/* Marker B */}
-        <Marker position={[ptB.lat, ptB.lng]} icon={makePin('#f59e0b', 'B')}>
-          <Popup>
-            <strong>Titik B</strong><br />
-            {ptB.name || `${ptB.lat.toFixed(4)}, ${ptB.lng.toFixed(4)}`}
-          </Popup>
-        </Marker>
-
-        {/* Garis lurus Haversine (selalu tampil, putus-putus) */}
-        <Polyline
-          positions={[[ptA.lat, ptA.lng], [ptB.lat, ptB.lng]]}
-          pathOptions={{
-            color: '#94a3b8', weight: 2,
-            dashArray: '6 5', opacity: 0.7,
-          }}
-        />
-
-        {/* Rute OSRM (glow + garis utama) */}
-        {routeCoords && (
-          <>
-            <Polyline
-              positions={routeCoords}
-              pathOptions={{ color: '#93c5fd', weight: 9, opacity: 0.35 }}
-            />
-            <Polyline
-              positions={routeCoords}
-              pathOptions={{
-                color: '#2563eb', weight: 4, opacity: 0.95,
-                lineCap: 'round', lineJoin: 'round',
-              }}
-            />
-          </>
-        )}
-      </MapContainer>
-
-      {/* Legend */}
-      <div className="lp-minimap-legend">
-        <span><span className="leg-dot" style={{ background: '#22c55e' }} /> Titik A</span>
-        <span><span className="leg-dot" style={{ background: '#f59e0b' }} /> Titik B</span>
-        <span>
-          <span className="leg-line dashed" /> Haversine ({straight} km)
-        </span>
-        {routeCoords && (
-          <span><span className="leg-line solid" /> OSRM</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ─── AnalysisResult ─────────────────────────────────────────── */
-function AnalysisResult({ result }) {
-  const { straight, route, ptA, ptB } = result
-
-  const midLat = ((ptA.lat + ptB.lat) / 2).toFixed(4)
-  const midLng = ((ptA.lng + ptB.lng) / 2).toFixed(4)
-
-  const dLng = (ptB.lng - ptA.lng) * Math.PI / 180
-  const la1 = ptA.lat * Math.PI / 180
-  const la2 = ptB.lat * Math.PI / 180
-  const y = Math.sin(dLng) * Math.cos(la2)
-  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng)
-  const bearing = ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360
-
-  const bearingDir = (b) => {
-    if (b < 22.5 || b >= 337.5) return 'Utara (N)'
-    if (b < 67.5)  return 'Timur Laut (NE)'
-    if (b < 112.5) return 'Timur (E)'
-    if (b < 157.5) return 'Tenggara (SE)'
-    if (b < 202.5) return 'Selatan (S)'
-    if (b < 247.5) return 'Barat Daya (SW)'
-    if (b < 292.5) return 'Barat (W)'
-    return 'Barat Laut (NW)'
-  }
-
-  const detour = route?.distanceKm
-    ? (((route.distanceKm - straight) / straight) * 100).toFixed(1)
-    : null
-
-  return (
-    <div className="lp-result-wrap" style={{ animation: 'fadeUp 0.4s ease both' }}>
-      <div className="lp-result-header">✅ Hasil Analisis Spasial</div>
-
-      {/* Kartu utama */}
-      <div className="lp-result-cards">
-        <div className="lp-result-card lp-card-straight">
-          <div className="lp-rc-label">📐 Haversine (Garis Lurus)</div>
-          <div className="lp-rc-value green">{straight} <span>km</span></div>
-          <div className="lp-rc-sub">Jarak terpendek di permukaan bumi</div>
-        </div>
-        {route?.distanceKm ? (
-          <div className="lp-result-card lp-card-route">
-            <div className="lp-rc-label">🗺 Via Jalan (OSRM)</div>
-            <div className="lp-rc-value blue">{route.distanceKm} <span>km</span></div>
-            <div className="lp-rc-sub">~{route.durationMin} menit berkendara</div>
-          </div>
-        ) : (
-          <div className="lp-result-card lp-card-osrm-fail">
-            <div className="lp-rc-label">⚠ Via Jalan</div>
-            <div className="lp-rc-value amber" style={{ fontSize: 18 }}>Tidak Tersedia</div>
-            <div className="lp-rc-sub">OSRM timeout · pakai Haversine</div>
-          </div>
-        )}
-      </div>
-
-      {/* Detail */}
-      <div className="lp-result-detail">
-        {[
-          ['🧭 Azimuth / Arah', `${bearing.toFixed(1)}° — ${bearingDir(bearing)}`],
-          ['📍 Titik Tengah', `${midLat}, ${midLng}`],
-          detour ? ['📊 Detour Rute', `+${detour}% lebih jauh dari garis lurus`] : null,
-          ['🌐 Koordinat A', `${ptA.lat.toFixed(6)}°N, ${ptA.lng.toFixed(6)}°E`],
-          ['🌐 Koordinat B', `${ptB.lat.toFixed(6)}°N, ${ptB.lng.toFixed(6)}°E`],
-        ].filter(Boolean).map(([label, val]) => (
-          <div className="lp-detail-row" key={label}>
-            <span className="lp-detail-label">{label}</span>
-            <span className="lp-detail-val">{val}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Mini Map ── */}
-      <MiniMap
-        ptA={ptA}
-        ptB={ptB}
-        routeCoords={route?.coords || null}
-        straight={straight}
-      />
-    </div>
-  )
-}
-
-/* ─── FormulaInfo ────────────────────────────────────────────── */
-function FormulaInfo() {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="lp-formula-wrap">
-      <button className="lp-formula-toggle" onClick={() => setOpen(o => !o)}>
-        {open ? '▲' : '▼'} Rumus Haversine yang digunakan
-      </button>
-      {open && (
-        <div className="lp-formula-body">
-          <div className="lp-formula-block">
-            <div className="lp-formula-line">a = sin²(Δlat/2) + cos(lat₁)·cos(lat₂)·sin²(Δlng/2)</div>
-            <div className="lp-formula-line">c = 2·atan2(√a, √(1−a))</div>
-            <div className="lp-formula-line">d = R · c &nbsp;&nbsp;(R = 6.371 km)</div>
-          </div>
-          <div className="lp-formula-note">
-            Haversine mengasumsikan bumi berbentuk bola sempurna.
-            Hasil dalam <strong>kilometer (km)</strong>.
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── PointInput ─────────────────────────────────────────────── */
-function PointInput({ label, color, value, onChange, mode, schools, loadingSchools }) {
-  const [search, setSearch] = useState('')
-
-  const filtered = schools.filter(s =>
-    s.nama_sekolah.toLowerCase().includes(search.toLowerCase()) ||
-    s.kecamatan?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  return (
-    <div className="lp-point-box" style={{ '--point-color': color }}>
-      <div className="lp-point-label">
-        <span className="lp-point-dot" style={{ background: color }} />
-        {label}
-        {value.name && (
-          <span className="lp-point-name" title={value.name}>{value.name}</span>
-        )}
-      </div>
-
-      {mode === 'manual' ? (
-        <div className="lp-coord-inputs">
-          <div className="lp-input-group">
-            <label>Latitude</label>
-            <input
-              type="number" step="0.0001"
-              placeholder="cth: 3.5986"
-              value={value.lat}
-              onChange={e => onChange({ ...value, lat: e.target.value, name: '' })}
-              className="lp-input" style={{ '--input-focus': color }}
-            />
-          </div>
-          <div className="lp-input-group">
-            <label>Longitude</label>
-            <input
-              type="number" step="0.0001"
-              placeholder="cth: 98.6785"
-              value={value.lng}
-              onChange={e => onChange({ ...value, lng: e.target.value, name: '' })}
-              className="lp-input" style={{ '--input-focus': color }}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="lp-school-picker">
-          <input
-            className="lp-input lp-search-input"
-            style={{ '--input-focus': color }}
-            placeholder="🔍 Cari nama sekolah..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <div className="lp-school-list">
-            {loadingSchools ? (
-              <div className="lp-school-loading">⏳ Memuat data sekolah...</div>
-            ) : filtered.length === 0 ? (
-              <div className="lp-school-loading">Tidak ditemukan</div>
-            ) : filtered.slice(0, 80).map(s => (
-              <button
-                key={s.id}
-                className={`lp-school-item ${value.lat === String(s.lat) ? 'selected' : ''}`}
-                style={{ '--item-color': color }}
-                onClick={() => {
-                  onChange({ lat: String(s.lat), lng: String(s.lng), name: s.nama_sekolah })
-                  setSearch('')
-                }}
-              >
-                <span className={`lp-school-badge badge-${s.jenjang}`}>{s.jenjang}</span>
-                <span className="lp-school-item-name">{s.nama_sekolah}</span>
-                <span className="lp-school-item-kec">{s.kecamatan}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {value.lat && value.lng && (
-        <div className="lp-coord-preview">
-          📌 {parseFloat(value.lat).toFixed(4)}°N, {parseFloat(value.lng).toFixed(4)}°E
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── SpatialAnalysis ────────────────────────────────────────── */
-function SpatialAnalysis() {
-  const [ptA, setPtA]       = useState({ lat: '', lng: '', name: '' })
-  const [ptB, setPtB]       = useState({ lat: '', lng: '', name: '' })
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState('')
-  const [mode, setMode]     = useState('school')       // 'manual' | 'school'
-  const [schools, setSchools] = useState([])
-  const [loadingSchools, setLoadingSchools] = useState(false)
-
-  /* Ambil list sekolah dari API */
-  useEffect(() => {
-    if (mode === 'school' && schools.length === 0) {
-      setLoadingSchools(true)
-      axios.get(`${API}/schools`)
-        .then(r => setSchools(r.data.data || []))
-        .catch(() => setSchools([]))
-        .finally(() => setLoadingSchools(false))
-    }
-  }, [mode])
-
-  const calculate = async () => {
-    const la = parseFloat(ptA.lat), loa = parseFloat(ptA.lng)
-    const lb = parseFloat(ptB.lat), lob = parseFloat(ptB.lng)
-    if ([la, loa, lb, lob].some(isNaN)) {
-      setError('⚠ Masukkan koordinat latitude & longitude yang valid untuk kedua titik!')
-      return
-    }
-    if (la === lb && loa === lob) {
-      setError('⚠ Kedua titik tidak boleh sama!')
-      return
-    }
-    setError('')
-    setResult(null)
-    setLoading(true)
-    const straight = haversine(la, loa, lb, lob)
-    const route    = await fetchOSRM(la, loa, lb, lob)
-    setLoading(false)
-    setResult({ straight, route, ptA: { ...ptA, lat: la, lng: loa }, ptB: { ...ptB, lat: lb, lng: lob } })
-  }
-
-  const reset = () => {
-    setPtA({ lat: '', lng: '', name: '' })
-    setPtB({ lat: '', lng: '', name: '' })
-    setResult(null)
-    setError('')
-  }
-
+function ContributorsSection() {
   return (
     <div className="lp-spatial-wrap">
       <div className="lp-spatial-inner">
-
-        {/* Header */}
         <div className="lp-spatial-header">
-          <div className="lp-spatial-tag">🔬 Analisis Spasial</div>
-          <h2 className="lp-spatial-title">Hitung Jarak 2 Titik</h2>
+          <div className="lp-spatial-tag">👥 Developer</div>
+          <h2 className="lp-spatial-title">Mahasiswa Kontributor</h2>
           <p className="lp-spatial-sub">
-            Pilih dua sekolah dari database atau masukkan koordinat manual.
-            Sistem akan menghitung jarak Haversine dan rute jalan via OSRM,
-            lalu menampilkannya di peta interaktif.
+            Tim mahasiswa yang berkontribusi dalam pengembangan proyek SIG Persebaran Sekolah Medan.
           </p>
         </div>
 
-        {/* Mode toggle */}
-        <div className="lp-mode-toggle">
-          <button
-            className={`lp-mode-btn ${mode === 'school' ? 'active' : ''}`}
-            onClick={() => { setMode('school'); setResult(null) }}>
-            🏫 Pilih dari Sekolah
-          </button>
-          <button
-            className={`lp-mode-btn ${mode === 'manual' ? 'active' : ''}`}
-            onClick={() => { setMode('manual'); setResult(null) }}>
-            ✏️ Input Koordinat Manual
-          </button>
+        <div className="lp-contributors-grid">
+          {contributors.map((member) => (
+            <article
+              className="lp-contributor-card"
+              key={member.nim}
+              style={{ '--contrib-color': member.accent }}
+            >
+              <div className="lp-contributor-photo-wrap">
+                <img
+                  src={member.photo}
+                  alt={member.name}
+                  className="lp-contributor-photo"
+                />
+              </div>
+              <div className="lp-contributor-body">
+                <div className="lp-contributor-name">{member.name}</div>
+                <div className="lp-contributor-nim">NIM {member.nim}</div>
+                <div className="lp-contributor-role">{member.role}</div>
+              </div>
+            </article>
+          ))}
         </div>
-
-        {/* Input grid */}
-        <div className="lp-points-grid">
-          <PointInput
-            label="Titik A" color="#22c55e"
-            value={ptA}
-            onChange={v => { setPtA(v); setResult(null) }}
-            mode={mode} schools={schools} loadingSchools={loadingSchools}
-          />
-          <div className="lp-points-divider">
-            <div className="lp-divider-line" />
-            <div className="lp-divider-icon">📐</div>
-            <div className="lp-divider-line" />
-          </div>
-          <PointInput
-            label="Titik B" color="#f59e0b"
-            value={ptB}
-            onChange={v => { setPtB(v); setResult(null) }}
-            mode={mode} schools={schools} loadingSchools={loadingSchools}
-          />
-        </div>
-
-        {/* Error */}
-        {error && <div className="lp-error">{error}</div>}
-
-        {/* Actions */}
-        <div className="lp-calc-actions">
-          <button className="lp-btn-calc" onClick={calculate} disabled={loading}>
-            {loading
-              ? <><span className="lp-spinner" />Menghitung Rute...</>
-              : <>📏 Hitung Jarak & Tampilkan Peta</>}
-          </button>
-          {(result || ptA.lat || ptB.lat) && (
-            <button className="lp-btn-reset" onClick={reset}>🔄 Reset</button>
-          )}
-        </div>
-
-        {/* Result + Mini Map */}
-        {result && <AnalysisResult result={result} />}
-
-        <FormulaInfo />
       </div>
     </div>
   )
@@ -604,6 +179,16 @@ export default function LandingPage({ onOpenMap }) {
         .lp-spatial-title { font-size:clamp(1.8rem,4vw,2.5rem); font-weight:800; letter-spacing:-.03em; margin-bottom:12px; }
         .lp-spatial-sub { color:var(--lp-muted); font-size:14px; line-height:1.7; max-width:560px; margin:0 auto; }
 
+        .lp-contributors-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+        .lp-contributor-card { background:var(--lp-bg); border:1.5px solid var(--lp-border); border-radius:18px; padding:22px 18px; display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; transition:all .25s; }
+        .lp-contributor-card:hover { border-color:var(--contrib-color); transform:translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,0.28); }
+        .lp-contributor-photo-wrap { width:88px; height:88px; border-radius:50%; padding:3px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, var(--contrib-color), rgba(255,255,255,0.18)); }
+        .lp-contributor-photo { width:100%; height:100%; border-radius:50%; object-fit:cover; border:3px solid var(--lp-bg); }
+        .lp-contributor-body { display:flex; flex-direction:column; gap:6px; }
+        .lp-contributor-name { font-size:14px; font-weight:700; color:var(--lp-text); line-height:1.3; }
+        .lp-contributor-nim { font-family:var(--lp-mono); font-size:11px; color:var(--lp-muted); letter-spacing:0.06em; }
+        .lp-contributor-role { font-size:11px; color:var(--lp-text); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); border-radius:999px; padding:4px 10px; display:inline-flex; align-self:center; }
+
         /* Mode toggle */
         .lp-mode-toggle { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
         .lp-mode-btn { font-family:var(--lp-font); font-size:13px; font-weight:600; padding:8px 20px; border-radius:8px; cursor:pointer; transition:all .2s; background:var(--lp-surface2); color:var(--lp-muted); border:1.5px solid var(--lp-border); }
@@ -730,7 +315,7 @@ export default function LandingPage({ onOpenMap }) {
           <div className="lp-nav-links">
             <button className="lp-nav-btn ghost"
               onClick={() => spatialRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-              Analisis Spasial
+              Kontributor
             </button>
             <button className="lp-nav-btn primary" onClick={onOpenMap}>Buka Peta →</button>
           </div>
@@ -754,7 +339,7 @@ export default function LandingPage({ onOpenMap }) {
             <button className="lp-hero-btn main" onClick={onOpenMap}>🗺 Buka Peta Interaktif</button>
             <button className="lp-hero-btn secondary"
               onClick={() => spatialRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-              📐 Analisis Jarak
+              � Kontributor
             </button>
           </div>
           <div className="lp-hero-badges">
@@ -790,9 +375,9 @@ export default function LandingPage({ onOpenMap }) {
           </div>
         </section>
 
-        {/* Spatial Analysis */}
+        {/* Contributors */}
         <section className="lp-spatial-section" ref={spatialRef}>
-          <SpatialAnalysis />
+          <ContributorsSection />
         </section>
 
         {/* CTA */}
