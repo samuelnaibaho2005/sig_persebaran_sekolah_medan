@@ -231,7 +231,7 @@ export default function FormPage({ token, onLogout }) {
               </select>
             </div>
 
-            {/* <div className="row-2">
+            <div className="row-2">
               <div className="field">
                 <label>No. Telepon</label>
                 <input value={form.no_telepon} onChange={e => set('no_telepon', e.target.value)} placeholder="061-xxxxxx" />
@@ -240,7 +240,7 @@ export default function FormPage({ token, onLogout }) {
                 <label>Website</label>
                 <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="www.sman5medan.sch.id" />
               </div>
-            </div> */}
+            </div>
 
             <div className="field">
               <label>URL Foto (Cloudinary)</label>

@@ -280,7 +280,7 @@ function RoutePanel({ routeInfo, schoolName, onClose }) {
 }
 
 // ── App utama ──────────────────────────────────────────────────
-export default function App() {
+export default function App({ onBack }) {
   const [schools, setSchools]         = useState([])
   const [filters, setFilters]         = useState({ jenjang: '', status: '', akreditasi: '' })
   const [radius, setRadius]           = useState(3)
@@ -357,22 +357,14 @@ export default function App() {
     <div id="root">
       {/* ── Topbar ── */}
       <div className="topbar">
-        <h1>🏫 Peta Sekolah Kota Medan</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Legenda jenjang */}
-          {Object.entries(COLORS).map(([j, c]) => (
-            <span key={j} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: c, display: 'inline-block' }}></span>{j}
-            </span>
-          ))}
-          {/* Legenda vektor */}
-          <span style={{ fontSize: 10, color: '#64748b', borderLeft: '1px solid #e2e8f0', paddingLeft: 8,
-            display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span>● Point</span>
-            <span style={{ color: '#2563eb' }}>— Line</span>
-            <span style={{ color: 'rgba(37,99,235,0.4)' }}>◉ Polygon</span>
-          </span>
-        </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <button onClick={onBack} style={{
+      background: 'none', border: '1px solid #e2e8f0',
+      borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
+      fontSize: 13, color: '#475569', fontWeight: 600
+    }}>← Beranda</button>
+    <h1>🏫 Peta Sekolah Kota Medan</h1>
+  </div>
       </div>
 
       <div className="main">
