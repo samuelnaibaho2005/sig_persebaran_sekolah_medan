@@ -459,4 +459,56 @@ router.post('/init/create-view', async (req, res) => {
   }
 });
 
+// ================================================================
+// POST /api/schools/init/insert-kecamatan — insert data kecamatan
+// ================================================================
+router.post('/init/insert-kecamatan', async (req, res) => {
+  try {
+    const kecamatanList = [
+      'Medan Amplas',
+      'Medan Area',
+      'Medan Barat',
+      'Medan Baru',
+      'Medan Belawan',
+      'Medan Deli',
+      'Medan Denai',
+      'Medan Helvetia',
+      'Medan Johor',
+      'Medan Kota',
+      'Medan Labuhan',
+      'Medan Maimun',
+      'Medan Marelan',
+      'Medan Perjuangan',
+      'Medan Petisah',
+      'Medan Polonia',
+      'Medan Selayang',
+      'Medan Sunggal',
+      'Medan Tembung',
+      'Medan Timur',
+      'Medan Tuntuntan'
+    ];
+
+    let insertedCount = 0;
+    for (const nama of kecamatanList) {
+      const result = await pool.query(
+        'INSERT INTO kecamatan (nama_kecamatan) VALUES ($1) ON CONFLICT DO NOTHING RETURNING kecamatan_id',
+        [nama]
+      );
+      if (result.rows.length > 0) insertedCount++;
+    }
+
+    const totalResult = await pool.query('SELECT COUNT(*) as total FROM kecamatan');
+    const total = totalResult.rows[0].total;
+
+    res.json({
+      success: true,
+      message: `✓ Data kecamatan berhasil ditambahkan!`,
+      inserted: insertedCount,
+      total: total
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

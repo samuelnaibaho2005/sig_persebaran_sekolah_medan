@@ -282,7 +282,7 @@ function RoutePanel({ routeInfo, schoolName, onClose }) {
 // ── App utama ──────────────────────────────────────────────────
 export default function App({ onBack }) {
   const [schools, setSchools]         = useState([])
-  const [filters, setFilters]         = useState({ jenjang: '', status: '', akreditasi: '' })
+  const [filters, setFilters]         = useState({ jenjang: '', status: '', akreditasi: '', kecamatan: '' })
   const [radius, setRadius]           = useState(3)
   const [userPos, setUserPos]         = useState(null)
   const [flyTo, setFlyTo]             = useState(null)
@@ -295,7 +295,19 @@ export default function App({ onBack }) {
   const [routeLoading, setRouteLoad]  = useState(false)
   const [activeSchool, setActiveSchool] = useState(null) // objek sekolah yang aktif
 
+  // State untuk options dari API
+  const [kecamatanOptions, setKecamatanOptions] = useState([])
+
   const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }))
+
+  // Fetch options (kecamatan, dll)
+  useEffect(() => {
+    axios.get(`${API}/schools/options`)
+      .then(r => {
+        setKecamatanOptions(r.data.data.kecamatan || [])
+      })
+      .catch(err => console.error('Error fetching options:', err.message))
+  }, [])
 
   useEffect(() => {
     const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
@@ -438,6 +450,16 @@ export default function App({ onBack }) {
               <select value={filters.akreditasi} onChange={e => setF('akreditasi', e.target.value)}>
                 <option value="">Semua Akreditasi</option>
                 {['A', 'B', 'C', 'Belum'].map(a => <option key={a}>{a}</option>)}
+              </select>
+            </div>
+
+            <div className="filter-section">
+              <label>Kecamatan</label>
+              <select value={filters.kecamatan} onChange={e => setF('kecamatan', e.target.value)}>
+                <option value="">Semua Kecamatan</option>
+                {kecamatanOptions.map(k => (
+                  <option key={k.id} value={k.nama}>{k.nama}</option>
+                ))}
               </select>
             </div>
 
