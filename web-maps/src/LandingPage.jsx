@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import bagasPhoto from './assets/contributors/bagas.jpeg'
 import fajarPhoto from './assets/contributors/fajar.jpeg'
-import riaPhoto from './assets/contributors/ria.svg'
+import riaPhoto from './assets/contributors/ria.jpeg'
 import samuelPhoto from './assets/contributors/samuel.jpg'
-import zakiyyaPhoto from './assets/contributors/zakiyya.svg'
-import partogiPhoto from './assets/contributors/partogi.svg'
+import zakiyyaPhoto from './assets/contributors/dilla.jpeg'
+import partogiPhoto from './assets/contributors/partogi.png'
 
 
 const contributors = [

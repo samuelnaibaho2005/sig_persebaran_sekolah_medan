@@ -160,11 +160,11 @@ router.get('/:id', async (req, res) => {
 //       fasilitas: { has_lab_komputer, has_perpustakaan, ... },
 //       ekskul: [array nama ekskul string]
 // ================================================================
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
   const {
     nama_sekolah, npsn, jenjang, status, akreditasi, kurikulum,
     kecamatan, spp_id, jumlah_siswa, jumlah_guru, alamat,
-    jam_operasional, no_telepon, website, foto_url, lat, lng,
+    jam_operasional, foto_url, lat, lng,
     has_lab_komputer, has_perpustakaan, has_lapangan,
     has_lab_ipa, has_musholla, has_kantin,
     ekskul = []
@@ -190,20 +190,18 @@ router.post('/', authMiddleware, async (req, res) => {
         nama_sekolah, npsn, jenjang_id, status_id, akreditasi_id,
         kurikulum_id, kecamatan_id, spp_id,
         jumlah_siswa, jumlah_guru, alamat,
-        jam_operasional, no_telepon, website, foto_url,
-        lokasi_lat, lokasi_lng,
-        lokasi
+        jam_operasional, foto_url,
+        lokasi_lat, lokasi_lng
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11, $12, $13, $14, $15,
-        $16, $17,
-        ST_SetSRID(ST_MakePoint($17, $16), 4326)
+        $9, $10, $11, $12, $13,
+        $14, $15
       ) RETURNING sekolah_id
     `, [
       nama_sekolah, npsn || null, jenjangId, statusId, akreditasiId,
       kurikulumId, kecamatanId, spp_id || 1,
       jumlah_siswa || null, jumlah_guru || null, alamat || null,
-      jam_operasional || 'Pagi', no_telepon || null, website || null, foto_url || null,
+      jam_operasional || 'Pagi', foto_url || null,
       parseFloat(lat), parseFloat(lng)
     ]);
 
@@ -265,11 +263,11 @@ router.post('/', authMiddleware, async (req, res) => {
 // ================================================================
 // PUT /api/schools/:id — update sekolah (perlu login)
 // ================================================================
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', async (req, res) => {
   const {
     nama_sekolah, npsn, jenjang, status, akreditasi, kurikulum,
     kecamatan, spp_id, jumlah_siswa, jumlah_guru, alamat,
-    jam_operasional, no_telepon, website, foto_url, lat, lng,
+    jam_operasional, foto_url, lat, lng,
     has_lab_komputer, has_perpustakaan, has_lapangan,
     has_lab_ipa, has_musholla, has_kantin,
     ekskul = []
@@ -290,17 +288,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
         nama_sekolah=$1, npsn=$2, jenjang_id=$3, status_id=$4, akreditasi_id=$5,
         kurikulum_id=$6, kecamatan_id=$7, spp_id=$8,
         jumlah_siswa=$9, jumlah_guru=$10, alamat=$11,
-        jam_operasional=$12, no_telepon=$13, website=$14, foto_url=$15,
-        lokasi_lat=$16, lokasi_lng=$17,
-        lokasi=ST_SetSRID(ST_MakePoint($17, $16), 4326)
-      WHERE sekolah_id=$18
+        jam_operasional=$12, foto_url=$13,
+        lokasi_lat=$14, lokasi_lng=$15
+      WHERE sekolah_id=$16
       RETURNING sekolah_id, nama_sekolah
     `, [
       nama_sekolah, npsn || null, jenjangId, statusId, akreditasiId,
       kurikulumId, kecamatanId, spp_id || 1,
       jumlah_siswa || null, jumlah_guru || null, alamat || null,
-      jam_operasional || 'Pagi', no_telepon || null, website || null, foto_url || null,
-      parseFloat(lat), parseFloat(lng), req.params.id
+      jam_operasional || 'Pagi', foto_url || null,
+      parseFloat(lat), parseFloat(lng),
+      req.params.id
     ]);
 
     if (result.rows.length === 0) {
@@ -361,7 +359,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // ================================================================
 // DELETE /api/schools/:id — hapus sekolah (perlu login)
 // ================================================================
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

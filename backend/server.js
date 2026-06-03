@@ -39,6 +39,27 @@ app.use((req, res) => {
 
 // ── Start server ──────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
+
+  // Pastikan sekolah_id punya sequence auto-increment
+  try {
+    const pool = require('./src/db');
+    await pool.query(`
+      DO $$
+      BEGIN
+        -- Buat sequence jika belum ada
+        IF NOT EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'sekolah_sekolah_id_seq') THEN
+          CREATE SEQUENCE sekolah_sekolah_id_seq;
+        END IF;
+        -- Set nilai sequence ke MAX sekolah_id saat ini
+        PERFORM setval('sekolah_sekolah_id_seq', COALESCE((SELECT MAX(sekolah_id) FROM sekolah), 0));
+        -- Set DEFAULT kolom sekolah_id ke sequence
+        ALTER TABLE sekolah ALTER COLUMN sekolah_id SET DEFAULT nextval('sekolah_sekolah_id_seq');
+      END $$;
+    `);
+    console.log('Sequence sekolah_id berhasil dikonfigurasi.');
+  } catch (err) {
+    console.error('Gagal setup sequence sekolah_id:', err.message);
+  }
 });
